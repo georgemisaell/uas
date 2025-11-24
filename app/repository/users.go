@@ -12,8 +12,9 @@ func GetAllUsers(db *sql.DB) ([]models.User, error){
 	var users []models.User
 
 	query := `
-		SELECT id, username, email, password_hash, full_name, role_id, is_active, created_at, updated_at
-		FROM users
+		SELECT u.id, u.username, u.email, u.password_hash, u.full_name, u.role_id, r.name, u.is_active, u.created_at, u.updated_at
+		FROM users u
+		JOIN roles r ON u.role_id = r.id
 	`
 
 	rows, err := db.Query(query)
@@ -32,6 +33,7 @@ func GetAllUsers(db *sql.DB) ([]models.User, error){
 			&user.PasswordHash,
 			&user.FullName,
 			&user.RoleID,
+			&user.RoleName,
 			&user.IsActive,
 			&user.CreatedAt,
 			&user.UpdatedAt,

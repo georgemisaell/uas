@@ -3,6 +3,7 @@ package routes
 import (
 	"database/sql"
 	"uas/app/services"
+	"uas/middleware"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -11,32 +12,37 @@ func SetupRoutes(app *fiber.App, postgreSQL *sql.DB) {
 
 	api := app.Group("/api/v1")
 
-	// Autentikasi & Otorisasi
+	// Autentikasi & Otorisasi (tidak perlu login)
+	auth := api.Group("/auth")
+	auth.Post("/login", services.Login)
+	// (Perlu login)
+	auth.Get("/profile", middleware.AuthRequired(), services.GetProfile)
+
+	// Protected routes (perlu login) 
+	protected := api.Group("", middleware.AuthRequired()) 
 
 	// Users (Admin)
-	api.Get("/users", func(c *fiber.Ctx) error {
+	protected.Get("/users", middleware.AdminOnly(), func(c *fiber.Ctx) error {
 		return services.GetAllUsers(c, postgreSQL)
 	})
 
-	api.Get("/users/:id", func(c *fiber.Ctx) error {
+	protected.Get("/users/:id", middleware.AdminOnly(), func(c *fiber.Ctx) error {
 		return services.GetUserByID(c, postgreSQL)
 	})
 
-	api.Post("/users", func(c *fiber.Ctx) error {
+	protected.Post("/users", middleware.AdminOnly(), func(c *fiber.Ctx) error {
 		return services.CreateUser(c, postgreSQL)
 	})
 
-	api.Put("/users/:id", func(c *fiber.Ctx) error {
+	protected.Put("/users/:id", middleware.AdminOnly(), func(c *fiber.Ctx) error {
 		return services.UpdateUser(c, postgreSQL)
 	})
 
-	api.Delete("/users/:id", func(c *fiber.Ctx) error {
+	protected.Delete("/users/:id", middleware.AdminOnly(), func(c *fiber.Ctx) error {
 			return services.DeleteUser(c, postgreSQL)
 	})
 
 	// Achievements
-
-	// Mahasiswa & Dosen
 
 	 // Reports & Analytics 
 }

@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -13,6 +14,7 @@ type User struct {
 	PasswordHash string `json:"-"`
 	FullName string `json:"full_name"`
 	RoleID uuid.UUID `json:"role_id"`
+	RoleName string `json:"role_name"`
 	IsActive bool `json:"is_active"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -24,6 +26,7 @@ type CreateUser struct {
 	Password string `json:"password"`
 	FullName string `json:"full_name"`
 	RoleID uuid.UUID `json:"role_id"`
+	RoleName string `json:"role_name"`
 	IsActive bool `json:"is_active"`
 }
 
@@ -33,4 +36,21 @@ type UpdateUser struct {
 	FullName string `json:"full_name"`
 	RoleID uuid.UUID `json:"role_id"`
 	IsActive bool `json:"is_active"`
+}
+
+type LoginRequest struct { 
+	Username string `json:"username"` 
+	Password string `json:"password"` 
+}
+
+type LoginResponse struct { 
+	User  User   `json:"user"` 
+	Token string `json:"token"`
+}
+
+type JWTClaims struct { 
+	UserID   uuid.UUID  `json:"user_id"` 
+	Username string `json:"username"` 
+	RoleName string `json:"role_name"` 
+	jwt.RegisteredClaims
 }

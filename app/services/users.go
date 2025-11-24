@@ -93,7 +93,8 @@ func CreateUser(c *fiber.Ctx, db *sql.DB) error {
 		PasswordHash: string(hashedPwd),
 		FullName:     req.FullName,
 		RoleID:       req.RoleID,
-		IsActive:     req.IsActive,
+		RoleName: 		req.RoleName,
+		IsActive:     true,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
