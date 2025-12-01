@@ -18,6 +18,7 @@ func SetupRoutes(app *fiber.App, postgreSQL *sql.DB, mongoDB *mongo.Database) {
 	auth.Post("/login", services.Login)
 	// (Perlu login)
 	auth.Get("/profile", middleware.AuthRequired(), services.GetProfile)
+	auth.Post("/refresh", middleware.AuthRequired(), services.RefreshToken)
 
 	// Protected routes (perlu login) 
 	protected := api.Group("", middleware.AuthRequired()) 

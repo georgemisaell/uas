@@ -68,3 +68,39 @@ func GetProfile(c *fiber.Ctx) error {
         }, 
     }) 
 }
+
+func RefreshToken(c *fiber.Ctx) error {
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid user session"})
+	}
+	
+	username, ok := c.Locals("username").(string)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid user session"})
+	}
+
+	roleName, ok := c.Locals("role_name").(string)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid user session"})
+	}
+
+	user := models.User{
+		ID:       userID,
+		Username: username,
+		RoleName: roleName,
+	}
+
+	newToken, err := utils.GenerateToken(user)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Gagal merefresh token"})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Token berhasil diperbarui",
+		"data": fiber.Map{
+			"token": newToken,
+		},
+	})
+}
