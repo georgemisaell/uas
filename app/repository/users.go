@@ -158,3 +158,27 @@ func DeleteUser(db *sql.DB, id uuid.UUID) error {
 
 	return nil
 }
+
+func UpdateUserRole(db *sql.DB, userID uuid.UUID, roleID uuid.UUID) error {
+    query := `
+        UPDATE users 
+        SET role_id = $1, updated_at = $2 
+        WHERE id = $3
+    `
+
+    result, err := db.Exec(query, roleID, time.Now(), userID)
+    if err != nil {
+        return err
+    }
+
+    rowsAffected, err := result.RowsAffected()
+    if err != nil {
+        return err
+    }
+
+    if rowsAffected == 0 {
+        return sql.ErrNoRows
+    }
+
+    return nil
+}

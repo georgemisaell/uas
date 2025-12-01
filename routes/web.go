@@ -44,10 +44,11 @@ func SetupRoutes(app *fiber.App, postgreSQL *sql.DB, mongoDB *mongo.Database) {
 			return services.DeleteUser(c, postgreSQL)
 	})
 
+	protected.Put("/users/:id/role", middleware.RequirePermission("user:manage"), func(c *fiber.Ctx) error {
+			return services.UpdateUserRole(c, postgreSQL)
+	})
+
 	// Achievements
-	// api.Get("/achievement", func(c *fiber.Ctx) error {
-	// 	return services.GetAllUsers(c, mongoDB)
-	// })
 
 	// Reports & Analytics 
 }

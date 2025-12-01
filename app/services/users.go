@@ -256,3 +256,55 @@ func DeleteUser(c *fiber.Ctx, db *sql.DB) error {
 		"success": true,
 	})
 }
+
+func UpdateUserRole(c *fiber.Ctx, db *sql.DB) error {
+    // 1. Ambil User ID dari Parameter URL
+    idParam := c.Params("id")
+    userID, err := uuid.Parse(idParam)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "message": "Format User ID tidak valid",
+            "success": false,
+        })
+    }
+
+    // 2. Parsing Body Request
+    var req models.UpdateRole
+    if err := c.BodyParser(&req); err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "message": "Format JSON tidak valid",
+            "success": false,
+        })
+    }
+
+    // 3. Validasi Role ID
+    roleID, err := uuid.Parse(req.RoleID)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "message": "Format Role ID tidak valid",
+            "success": false,
+        })
+    }
+
+    // 4. Panggil Repository
+    err = repository.UpdateUserRole(db, userID, roleID)
+    
+    if err == sql.ErrNoRows {
+        return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+            "message": "User tidak ditemukan",
+            "success": false,
+        })
+    } else if err != nil {
+        // Tips: Bisa ditambahkan cek error constraint foreign key jika Role ID tidak ada di tabel roles
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "message": "Gagal update role user",
+            "success": false,
+            "error":   err.Error(),
+        })
+    }
+
+    return c.JSON(fiber.Map{
+        "message": "Role user berhasil diperbarui",
+        "success": true,
+    })
+}
