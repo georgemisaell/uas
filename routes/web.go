@@ -49,6 +49,13 @@ func SetupRoutes(app *fiber.App, postgreSQL *sql.DB, mongoDB *mongo.Database) {
 	})
 
 	// Achievements
+	// protected.Get("/achievements", middleware.RequirePermission("achievement:read"), func(c *fiber.Ctx) error {
+	// 	return services.GetAllAchievements(c, postgreSQL, mongoDB)
+	// })
+
+	// protected.Post("/achievements", middleware.RequirePermission("achievement:create"), func(c *fiber.Ctx) error {
+	// 	return services.CreateAchievement(c, postgreSQL, mongoDB)
+	// })
 
 	// Reports & Analytics 
 }
