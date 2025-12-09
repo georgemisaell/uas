@@ -11,10 +11,9 @@ import (
 
 func SetupRoutes(app *fiber.App, postgreSQL *sql.DB, mongoDB *mongo.Database) {
 
-	api := app.Group("/api/v1")
+	api := app.Group("/api/v1") // (tidak perlu login)
 
 	// Autentikasi & Otorisasi 
-	// (tidak perlu login)
 	auth := api.Group("/auth")
 	auth.Post("/login", services.Login)
 	auth.Post("/refresh", services.Refresh)
@@ -22,29 +21,13 @@ func SetupRoutes(app *fiber.App, postgreSQL *sql.DB, mongoDB *mongo.Database) {
 
 	// Protected routes (perlu login) 
 	protected := api.Group("", middleware.AuthRequired()) 
+	userService := services.NewUserService(postgreSQL)
 
 	// Users (Admin)
-	protected.Get("/users", middleware.RequirePermission("user:manage"), func(c *fiber.Ctx) error {
-		return services.GetAllUsers(c, postgreSQL)
-	})
-
-	protected.Get("/users/:id", middleware.RequirePermission("user:manage"), func(c *fiber.Ctx) error {
-		return services.GetUserByID(c, postgreSQL)
-	})
-
-	protected.Post("/users", middleware.RequirePermission("user:manage"), func(c *fiber.Ctx) error {
-		return services.CreateUser(c, postgreSQL)
-	})
-
-	protected.Put("/users/:id", middleware.RequirePermission("user:manage"), func(c *fiber.Ctx) error {
-		return services.UpdateUser(c, postgreSQL)
-	})
-
-	protected.Delete("/users/:id", middleware.RequirePermission("user:manage"), func(c *fiber.Ctx) error {
-			return services.DeleteUser(c, postgreSQL)
-	})
-
-	protected.Put("/users/:id/role", middleware.RequirePermission("user:manage"), func(c *fiber.Ctx) error {
-			return services.UpdateUserRole(c, postgreSQL)
-	})
+	protected.Post("/users", userService.CreateUser)
+	protected.Get("/users", userService.GetAllUsers)
+	protected.Get("/users/:id", userService.GetUserByID)
+	protected.Put("/users/:id", userService.UpdateUser)
+	protected.Delete("/users/:id", userService.DeleteUser)
+	protected.Put("/users/:id/role", userService.UpdateUserRole)
 }
