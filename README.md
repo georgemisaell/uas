@@ -67,8 +67,8 @@ Buat file **`.env`** di root project (file ini **tidak boleh di-push ke GitHub**
 ```env
 APP_PORT=3000
 API_KEY=your-api-key
-POSTGRES_URI=postgres://postgres:root@localhost:5432/uas?sslmode=disable
-MONGO_URI=mongodb://localhost:27017
+POSTGRES_URI=postgres://<user>:<password>@<host>:<port>/<db>?sslmode=disable
+MONGO_URI=mongodb://<host>:<port>
 MONGO_DB=uas
 JWT_SECRET=your-secret-key-min-32-characters
 ```
