@@ -1,0 +1,160 @@
+package repository
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"time"
+	"uas/app/models"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+type AchievementRepository interface {
+	GetStudentIDByUserID(ctx context.Context, userID string) (string, error)
+	CreateAchievementMongo(ctx context.Context, data models.AchievementMongo) (string, error)
+	CreateAchievementReference(ctx context.Context, ref models.AchievementReference) error
+	GetAchievementByID(ctx context.Context, id string) (models.AchievementReference, error)
+  UpdateAchievement(ctx context.Context, pgID string, mongoID string, data models.AchievementMongo) error
+  SoftDeleteAchievement(ctx context.Context, pgID string, mongoID string) error
+	SubmitAchievement(ctx context.Context, id string) error
+}
+
+type achievementRepository struct {
+	pg    *sql.DB
+	mongo *mongo.Database
+}
+
+func NewAchievementRepository(pg *sql.DB, mongo *mongo.Database) AchievementRepository {
+	return &achievementRepository{pg: pg, mongo: mongo}
+}
+
+func (r *achievementRepository) GetStudentIDByUserID(ctx context.Context, userID string) (string, error) {
+	query := `SELECT id FROM students WHERE user_id = $1`
+	var studentID string
+	err := r.pg.QueryRowContext(ctx, query, userID).Scan(&studentID)
+	if err != nil {
+		return "", err
+	}
+	return studentID, nil
+}
+
+// Simpan ke MongoDB
+func (r *achievementRepository) CreateAchievementMongo(ctx context.Context, data models.AchievementMongo) (string, error) {
+	collection := r.mongo.Collection("achievements")
+	
+	result, err := collection.InsertOne(ctx, data)
+	if err != nil {
+		return "", fmt.Errorf("gagal insert ke mongo: %w", err)
+	}
+
+	oid, ok := result.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return "", fmt.Errorf("gagal cast insertedID")
+	}
+
+	return oid.Hex(), nil
+}
+
+// Simpan Referensi (PostgreSQL)
+func (r *achievementRepository) CreateAchievementReference(ctx context.Context, ref models.AchievementReference) error {
+	query := `
+		INSERT INTO achievement_references (
+			id, student_id, mongo_achievement_id, status, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $5)
+	`
+	_, err := r.pg.ExecContext(ctx, query, ref.ID, ref.StudentID, ref.MongoAchievementID, "draft", time.Now())
+	if err != nil {
+		return fmt.Errorf("gagal insert ke postgres: %w", err)
+	}
+	return nil
+}
+
+// Ambil Data Achievement berdasarkan ID (Postgres)
+func (r *achievementRepository) GetAchievementByID(ctx context.Context, id string) (models.AchievementReference, error) {
+    query := `
+        SELECT id, student_id, mongo_achievement_id, status 
+        FROM achievement_references 
+        WHERE id = $1 AND deleted_at IS NULL
+    `
+    var ref models.AchievementReference    
+    err := r.pg.QueryRowContext(ctx, query, id).Scan(&ref.ID, &ref.StudentID, &ref.MongoAchievementID, &ref.Status)
+    if err != nil {
+        return models.AchievementReference{}, err
+    }
+    return ref, nil
+}
+
+// Update Achievement (Mongo & Postgres Timestamp)
+func (r *achievementRepository) UpdateAchievement(ctx context.Context, pgID string, mongoID string, data models.AchievementMongo) error {
+    // Update MongoDB (Detail)
+    mongoOID, _ := primitive.ObjectIDFromHex(mongoID)
+    filter := bson.M{"_id": mongoOID}
+    
+    update := bson.M{
+        "$set": bson.M{
+            "achievementType": data.AchievementType,
+            "title":           data.Title,
+            "description":     data.Description,
+            "details":         data.Details,
+            "tags":            data.Tags,
+            "updatedAt":       time.Now(),
+        },
+    }
+
+    _, err := r.mongo.Collection("achievements").UpdateOne(ctx, filter, update)
+    if err != nil {
+        return fmt.Errorf("gagal update mongo: %w", err)
+    }
+
+    // Update PostgreSQL (Hanya updated_at)
+    queryPG := `UPDATE achievement_references SET updated_at = NOW() WHERE id = $1`
+    _, err = r.pg.ExecContext(ctx, queryPG, pgID)
+    if err != nil {
+        return fmt.Errorf("gagal update postgres: %w", err)
+    }
+
+    return nil
+}
+
+// Soft Delete
+func (r *achievementRepository) SoftDeleteAchievement(ctx context.Context, pgID string, mongoID string) error {
+    // Soft Delete Postgres
+    queryPG := `UPDATE achievement_references SET deleted_at = NOW() WHERE id = $1`
+    _, err := r.pg.ExecContext(ctx, queryPG, pgID)
+    if err != nil {
+        return fmt.Errorf("gagal soft delete postgres: %w", err)
+    }
+
+    // Soft Delete Mongo
+    mongoOID, _ := primitive.ObjectIDFromHex(mongoID)
+    filter := bson.M{"_id": mongoOID}
+    update := bson.M{"$set": bson.M{"deletedAt": time.Now()}}
+    
+    _, err = r.mongo.Collection("achievements").UpdateOne(ctx, filter, update)
+    return err
+}
+
+func (r *achievementRepository) SubmitAchievement(ctx context.Context, id string) error {
+    query := `
+        UPDATE achievement_references 
+        SET status = 'submitted', 
+            submitted_at = NOW(), 
+            updated_at = NOW() 
+        WHERE id = $1
+    `
+
+    result, err := r.pg.ExecContext(ctx, query, id)
+    if err != nil {
+        return fmt.Errorf("gagal submit prestasi: %w", err)
+    }
+
+    rowsAffected, _ := result.RowsAffected()
+    if rowsAffected == 0 {
+        return fmt.Errorf("data tidak ditemukan atau tidak ada perubahan")
+    }
+
+    return nil
+}

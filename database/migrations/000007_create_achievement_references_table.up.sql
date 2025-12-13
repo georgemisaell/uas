@@ -1,5 +1,4 @@
 -- 1. Membuat Tipe Data ENUM (Jalankan ini dulu)
--- DO block ini digunakan untuk mengecek apakah type sudah ada agar tidak error jika dijalankan ulang
 DO $$ BEGIN
     CREATE TYPE achievement_status_enum AS ENUM ('draft', 'submitted', 'verified', 'rejected');
 EXCEPTION
@@ -18,6 +17,7 @@ CREATE TABLE IF NOT EXISTS achievement_references (
     rejection_note TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_achievement_student
         FOREIGN KEY (student_id)
         REFERENCES students(id)

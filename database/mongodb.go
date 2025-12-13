@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -14,8 +15,9 @@ func ConnectMongoDB() *mongo.Database{
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	mongoURI := os.Getenv("MONGO_URI")
 	// Ganti dengan connection string MongoDB Anda
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017/")
+	clientOptions := options.Client().ApplyURI(mongoURI)
 
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
@@ -31,5 +33,5 @@ func ConnectMongoDB() *mongo.Database{
 	fmt.Println("Berhasil terhubung ke database MongoDB!")
 
 	// Set database
-	return client.Database("achievement")
+	return client.Database("uas")
 }
